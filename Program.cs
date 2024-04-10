@@ -1,9 +1,20 @@
 ﻿using System;
+using System.Threading.Tasks;
+
+namespace CodeConverterCLI;
 
 class Program
 {
-    static void Main(string[] args)
+    static async Task<int> Main(string[] args)
     {
-        Console.WriteLine("Hello World");
+        var rootCommand = new RootCommand("A CLI tool for launguage conversion");
+        rootCommand.AddOptions(
+            new CommandOption<string>(
+                new[] { "--version", "-v" },
+                "Show version information"));
+
+
+
+       return 0;
     }
 }
