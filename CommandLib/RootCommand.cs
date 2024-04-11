@@ -5,12 +5,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace CodeConverterCLI;
+namespace CodeConverterCLI.CommandLib;
 
-internal class RootCommand(string description): Command(
+internal class RootCommand(string description, bool atLeastRequired = false): Command(
     Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetExecutingAssembly().Location),
     [],
-    description
+    description,
+    atLeastRequired
     )
 {
 }

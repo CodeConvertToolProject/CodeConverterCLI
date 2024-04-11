@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 
-namespace CodeConverterCLI;
+namespace CodeConverterCLI.CommandLib;
 
 internal class Parser
 {
@@ -9,7 +9,7 @@ internal class Parser
 
     public Parser(string[] arguments)
     {
-        optionMap = new Dictionary<string, string>();
+        optionMap = [];
         ParseArguments(arguments);
     }
 

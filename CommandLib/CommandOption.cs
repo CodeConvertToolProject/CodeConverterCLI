@@ -2,7 +2,7 @@
 using System.ComponentModel;
 using System.Linq;
 
-namespace CodeConverterCLI;
+namespace CodeConverterCLI.CommandLib;
 
 internal interface ICommandOption
 {
@@ -20,19 +20,19 @@ internal class CommandOption<T>(string[] names, string description, bool isRequi
 
     public T? GetValue(Parser parser)
     {
-        string name = Names.FirstOrDefault(name => parser.GetArgumentByOption(name) != null, "");
-        if (name.Equals("")) return default;
+        string? nameFound = Names.FirstOrDefault(name => parser.GetArgumentByOption(name!) != null, default);
+        if (nameFound == null) return default;
 
         try
         {
-            return (T?)TypeDescriptor.GetConverter(typeof(T)).ConvertFrom
+            return (T?)TypeDescriptor.GetConverter(typeof(T?)).ConvertFrom
             (
-                parser.GetArgumentByOption(name)!
+                parser.GetArgumentByOption(nameFound)!
             );
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            throw new Exception(ex.Message);
+            throw new Exception($"'{parser.GetArgumentByOption(nameFound)}' is not a valid value for '{nameFound}'");
         }
     }
 
