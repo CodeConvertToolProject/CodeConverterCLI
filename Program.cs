@@ -160,10 +160,17 @@ class Program
 
     static void AddMainCLICommands(ref RootCommand rootCommand)
     {
-        var cliCommands = new CommandHandlers(accessToken, API_URL, userInfo);
+        var cliCommands = new CommandHandlers(accessToken, API_URL, userInfo, apiClient);
 
         var script = new Command("script", ["sc"], "Base command for working with scripts", true);
         var convert = new Command("convert", ["conv"], "Convert the given script to another language", true);
+        // var convert_test = new Command("convert_test", ["test"], "Test");
+
+        // convert_test.SetHandler( async (Dictionary<string, object?>? optionArgs) => {
+        //     var res = await cliCommands.ScriptConvertHandler("function greet(name) {\n  return 'Hello, ' + name + '!';}", "JavaScript", "Python", 100);
+
+        //     Console.WriteLine("\nRes: " + res);
+        //     });
 
         convert.AddOptions(
                 new CommandOption<string>(["-f", "--filename"], "The path to the script", true),
@@ -173,10 +180,11 @@ class Program
                 new CommandOption<string>(["--dir"], "The output directory (defaults to the current directory)")
                 );
 
-        convert.SetHandler(cliCommands.ConvertHandler);
+        // convert.SetHandler(cliCommands.ScriptConvertHandler);
 
         script.AddSubcommands(convert);
 
+        // rootCommand.AddSubcommands(script, convert_test);
         rootCommand.AddSubcommands(script);
     }
 
