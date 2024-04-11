@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Collections.Generic;
-using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -18,7 +17,7 @@ class Program
 {
     static readonly string API_URL = "https://localhost:63286";
     static HttpClient apiClient = new();
-    static UserInfoResponse? UserInfo;
+    static UserInfoResponse? userInfo;
     static string? accessToken;
 
     static void ConfigureHttpClient(ref HttpClient client, string url)
@@ -59,7 +58,7 @@ class Program
 
         response.EnsureSuccessStatusCode();
      
-        UserInfo = await ParseJson<UserInfoResponse>(response);
+        userInfo = await ParseJson<UserInfoResponse>(response);
     }
 
     static async Task<AccessTokenResponse> GetAccessToken(AccessTokenRequest accessTokenRequest, LoginResponse loginResponse)
@@ -109,10 +108,27 @@ class Program
 
         File.WriteAllText(filePath, jsonString);
     }
+
     static async Task LoginHandler(Dictionary<string, object?>? optionArgs)
     {
         string accessTokenFilePath = GetAccessTokenFilePath();
-        if (!File.Exists(accessTokenFilePath))
+        AccessTokenResponse? accessTokenObj = default;
+
+        if (File.Exists(accessTokenFilePath))
+        {
+            string accessTokenJson = File.ReadAllText(accessTokenFilePath);
+
+            accessTokenObj = JsonSerializer.Deserialize<AccessTokenResponse>(accessTokenJson);
+            accessToken = accessTokenObj?.AccessToken;
+
+            if (accessToken != null)
+            {
+                await GetUserInfo(new UserInfoRequest() { AccessToken = accessToken });
+                Console.WriteLine("Logged in successfully");
+            }
+        }
+
+        if (accessTokenObj == default)
         {
             LoginResponse loginResponse = await GetLoginInfo();
             Console.WriteLine($"Attempting to open browser so you can authorize. Should the browser not open use the following URL: \n\n{loginResponse.VerificationUriComplete}\n");
@@ -126,28 +142,58 @@ class Program
                         {
                             DeviceCode = loginResponse.DeviceCode,
                         },
-                        loginResponse
-                    );
+                        loginResponse);
 
                 accessToken = accessTokenResponse.AccessToken;
                 await GetUserInfo(new UserInfoRequest() { AccessToken = accessToken });
 
                 StoreAccessTokenInFile(accessTokenResponse);
 
-                Console.WriteLine(UserInfo!.UserName);
+                Console.WriteLine("Logged in successfully");
             }
             catch (Exception e)
             {
                 Console.WriteLine($"An error occured ({e.Message}) while fetching the access token");
             }
         } 
-        else
+    }
+
+    static void AddMainCLICommands(ref RootCommand rootCommand)
+    {
+        var cliCommands = new CommandHandlers(accessToken, API_URL, userInfo);
+
+        var script = new Command("script", ["sc"], "Base command for working with scripts", true);
+        var convert = new Command("convert", ["conv"], "Convert the given script to another language", true);
+
+        convert.AddOptions(
+                new CommandOption<string>(["-f", "--filename"], "The path to the script", true),
+                new CommandOption<string>(["--from"], "The script language/type", true),
+                new CommandOption<string>(["--to"], "The target language", true),
+                new CommandOption<string>(["-o", "--output"], "The output file", true),
+                new CommandOption<string>(["--dir"], "The output directory (defaults to the current directory)")
+                );
+
+        convert.SetHandler(cliCommands.ConvertHandler);
+
+        script.AddSubcommands(convert);
+
+        rootCommand.AddSubcommands(script);
+    }
+
+    static async Task Configure()
+    {
+        string accessTokenFilePath = GetAccessTokenFilePath();
+
+        if (File.Exists(accessTokenFilePath))
         {
-            Console.WriteLine("Reading access token from  a file.");
             string accessTokenJson = File.ReadAllText(accessTokenFilePath);
 
-            var accessTokenObj = JsonSerializer.Deserialize<AccessTokenResponse>(accessTokenJson);
-            accessToken = accessTokenObj!.AccessToken;
+            accessToken = JsonSerializer.Deserialize<AccessTokenResponse>(accessTokenJson)?.AccessToken;
+
+            if (accessToken != null)
+            {
+                await GetUserInfo(new UserInfoRequest() { AccessToken = accessToken });
+            }
         }
     }
 
@@ -156,7 +202,8 @@ class Program
         var rootCommand = new RootCommand("A CLI tool for language conversion");
 
         ConfigureHttpClient(ref apiClient, API_URL);
-        
+        await Configure();
+
         rootCommand.AddOptions(
             new CommandOption<bool?>(
                 ["--version", "-v"],
@@ -182,14 +229,17 @@ class Program
             if (File.Exists(accessTokenFilePath)) 
             {
                 File.Delete(accessTokenFilePath);
+                Console.WriteLine("Logged out successfully");
             }
             else
             {
-                Console.WriteLine("You were not authenticated.");
+                Console.WriteLine("You were not logged in");
             }
         });
 
         rootCommand.AddSubcommands(login, logout);
+
+        AddMainCLICommands(ref rootCommand);
 
         return await rootCommand.Execute(args);
     }

@@ -99,6 +99,24 @@ internal class Command(string name, string[] aliases, string description, bool a
 
         return 0;
     }
+
+    private static async Task InvokeAsyncHandler(HandlerDelegateAsync HandlerAsync, Dictionary<string, object?>? optionArguments)
+    {
+        try { 
+            await HandlerAsync(optionArguments); 
+        }
+        catch (Exception e) { Console.WriteLine(e.Message); }
+    }
+
+    private static async Task InvokeSyncHandler(HandlerDelegateSync HandlerSync, Dictionary<string, object?>? optionArguments)
+    {
+        try
+        {
+            await Task.Run(() => HandlerSync(optionArguments));
+        }
+        catch (Exception e) { Console.WriteLine(e.Message); }
+    }
+
     public async Task<int> Execute(string[] args)
     {
         if (args.Length == 0)
@@ -109,8 +127,8 @@ internal class Command(string name, string[] aliases, string description, bool a
                 return 1;
             }
 
-            if (HandlerAsync != null) await HandlerAsync(null);
-            else if (HandlerSync != null) await Task.Run(() => HandlerSync(null));
+            if (HandlerAsync != null) await InvokeAsyncHandler(HandlerAsync, null);  
+            else if (HandlerSync != null) await InvokeSyncHandler(HandlerSync, null);
 
             return 0;
         }
@@ -140,8 +158,8 @@ internal class Command(string name, string[] aliases, string description, bool a
 
         if (AllRequiredExist(parser) && handleUsageErrorsResult == 0)
         {
-            if (HandlerAsync != null) await HandlerAsync(optionArgs);
-            else if (HandlerSync != null) await Task.Run(() => HandlerSync(optionArgs));
+            if (HandlerAsync != null) await InvokeAsyncHandler(HandlerAsync, optionArgs);
+            else if (HandlerSync != null) await InvokeSyncHandler(HandlerSync, optionArgs);
 
             return 0;
         }
@@ -154,7 +172,7 @@ internal class Command(string name, string[] aliases, string description, bool a
         string usage(string tag) => AtLeastRequired ? $"<{tag}>" : $"[{tag}]";
 
         string appName = Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetExecutingAssembly().Location);
-        static string showAliases(string[] aliases_) => (aliases_.Length > 0 ? "|" + String.Join("|", aliases_) : "");
+        static string showAliases(string[] aliases_) => (aliases_.Length > 0 ? " | " + String.Join(" | ", aliases_) : "");
 
         if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -164,7 +182,7 @@ internal class Command(string name, string[] aliases, string description, bool a
         }
         
         Console.WriteLine($"Command: {CommandPath()}{showAliases(Aliases)}");
-        Console.WriteLine($"Description: {Description}");
+        Console.WriteLine($"Description: {Description}\n");
         Console.WriteLine(
             $"Usage: {CommandPath()} {(Subcommands.Count > 0? usage("command") : "")}" +
             $"{(Subcommands.Count > 0 && Options.Count >  0? " | " : "")}" + 
@@ -175,8 +193,9 @@ internal class Command(string name, string[] aliases, string description, bool a
             Console.WriteLine("Commands:");
             foreach (var subcommand in Subcommands) 
             {
-                Console.WriteLine($"\t{subcommand.Name}{showAliases(subcommand.Aliases)}\t{subcommand.Description}");
+                Console.WriteLine($"{subcommand.Name + showAliases(subcommand.Aliases), -20}{subcommand.Description}");
             }
+            Console.WriteLine();
         }
 
         if (Options.Count > 0)
@@ -186,7 +205,7 @@ internal class Command(string name, string[] aliases, string description, bool a
             {
                 Console.WriteLine
                 (
-                    $"\t--{String.Join('|', option.Names)}\t{(option.IsRequired ? "[REQUIRED]" : "")}{option.Description}"
+                    $"{String.Join('|', option.Names),-20}{(option.IsRequired ? "[REQUIRED] " : "")}{option.Description}"
                 );
             }
         }
