@@ -43,7 +43,6 @@ internal class CommandHandlers
     private UserInfo? userInfo;
     private HttpClient apiClient;
     private static string apiKey = "";
-
     private string url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={apiKey}";
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
     {
