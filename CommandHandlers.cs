@@ -42,7 +42,11 @@ internal class CommandHandlers
     private string userInfoFilePath;
     private UserInfo? userInfo;
     private HttpClient apiClient;
-    private string url = "";
+    /*private string openaiModel = "gpt-3.5-turbo-instruct";
+    private string openaiAccessKey = "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";*/
+    private static string apiKey = "";
+
+    private string url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={apiKey}";
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
     {
         this.userInfoFilePath = userInfoFilePath;
@@ -88,6 +92,17 @@ internal class CommandHandlers
 
     private async Task<string?> ScriptConvertHandler(string content, string sourceScript, string targetScript, int maxTokens)
     {
+        /*string reqUrl = $"/api/ScriptConvert/{openaiAccessKey}";
+
+        var req = new
+        {
+            model = openaiModel,
+            sourceScript,
+            targetScript,
+            content,
+            maxTokens
+        };*/
+
         var generateContentRequest = new GenerateContentRequest
         {
             contents = new List<Content>
