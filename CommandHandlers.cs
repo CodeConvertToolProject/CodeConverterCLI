@@ -42,9 +42,11 @@ internal class CommandHandlers
     private string userInfoFilePath;
     private UserInfo? userInfo;
     private HttpClient apiClient;
-    private string openaiModel = "gpt-3.5-turbo-instruct";
-    private static string apiKey = "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";
+    /*private string openaiModel = "gpt-3.5-turbo-instruct";
+    private string openaiAccessKey = "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";*/
+    private static string apiKey = "AIzaSyDG56kq42JQTYKNtWCbM4gjIQpi67cJw8g";
 
+    private string url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={apiKey}";
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
     {
         this.userInfoFilePath = userInfoFilePath;
@@ -75,7 +77,7 @@ internal class CommandHandlers
     private async Task<int> Upload(string actionUrl, Stream paramFileStream, string fileName)
     {
         HttpContent fileStreamContent = new StreamContent(paramFileStream);
-        
+
         using (var formData = new MultipartFormDataContent())
         {
             formData.Add(fileStreamContent, "file", fileName);
@@ -90,7 +92,7 @@ internal class CommandHandlers
 
     private async Task<string?> ScriptConvertHandler(string content, string sourceScript, string targetScript, int maxTokens)
     {
-        string url = $"/api/ScriptConvert/{apiKey}";
+        /*string reqUrl = $"/api/ScriptConvert/{openaiAccessKey}";
 
         var req = new
         {
@@ -99,21 +101,38 @@ internal class CommandHandlers
             targetScript,
             content,
             maxTokens
+        };*/
+
+        var generateContentRequest = new GenerateContentRequest
+        {
+            contents = new List<Content>
+            {
+                new Content
+                {
+                    parts = new List<Part>
+                    {
+                        new Part { text = $"Convert this script {content} from {sourceScript} to {targetScript} (pure text without tidle characters)" }
+                    }
+                }
+            }
         };
 
-        var jsonReq = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
+        var jsonReq = new StringContent(JsonSerializer.Serialize(generateContentRequest), Encoding.UTF8, "application/json");
 
         var response = await apiClient.PostAsync(url, jsonReq);
 
         if (response.IsSuccessStatusCode)
         {
-           var jsonResponse = await response.Content.ReadAsStringAsync();
-           return jsonResponse;
+            using var jsonResponse = await response.Content.ReadAsStreamAsync();
+
+            var generateContentResponse = JsonSerializer.Deserialize<GenerateContentResponse>(jsonResponse);
+
+            return generateContentResponse?.candidates?[0].content?.parts?[0].text;
         }
         return default;
     }
 
-    private static string ReadFile(string filePath) 
+    private static string ReadFile(string filePath)
     {
         try
         {
@@ -131,6 +150,8 @@ internal class CommandHandlers
     public async Task ConvertHandler(Dictionary<string, object?>? optionArgs)
     {
         CheckAndSetAuthentication();
+
+        apiClient.DefaultRequestHeaders.Authorization = null;
 
         string filePath = (string)optionArgs!.GetValueOrDefault("file")!;
         string source = (string)optionArgs!.GetValueOrDefault("from")!;
@@ -154,12 +175,14 @@ internal class CommandHandlers
             {
                 string completePath = (dir != null) ? Path.Combine(dir, output) : Path.Combine(Directory.GetCurrentDirectory(), output);
                 File.WriteAllText(completePath, result.Trim());
-
                 Console.WriteLine($"Converted {target} script written to {completePath}");
-            } else
+            } 
+            else
             {
                 Console.WriteLine(result.Trim());
             }
+
+            
         }
         catch (Exception ex)
         {
@@ -173,5 +196,4 @@ internal class CommandHandlers
 
         Console.WriteLine(JsonSerializer.Serialize(userInfo).ToString());
     }
-
 }
