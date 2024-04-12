@@ -43,7 +43,7 @@ internal class CommandHandlers
     private UserInfo? userInfo;
     private HttpClient apiClient;
     private string openaiModel = "gpt-3.5-turbo-instruct";
-    private static string apiKey = "";
+    private static string apiKey = "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";
 
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
     {
@@ -101,7 +101,7 @@ internal class CommandHandlers
             maxTokens
         };
 
-        var jsonReq = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
+        var jsonReq = new StringContent(JsonSerializer.Serialize(req));
 
         var response = await apiClient.PostAsync(url, jsonReq);
 
@@ -150,16 +150,28 @@ internal class CommandHandlers
 
         try
         {
-            string completePath = (dir != null)? Path.Combine(dir, output): Path.Combine(Directory.GetCurrentDirectory(), output);
-                
-            File.WriteAllText(completePath, result.Trim());
+            if (output != null)
+            {
+                string completePath = (dir != null) ? Path.Combine(dir, output) : Path.Combine(Directory.GetCurrentDirectory(), output);
+                File.WriteAllText(completePath, result.Trim());
 
-            Console.WriteLine($"Converted {target} script written to {completePath}");
+                Console.WriteLine($"Converted {target} script written to {completePath}");
+            } else
+            {
+                Console.WriteLine(result.Trim());
+            }
         }
         catch (Exception ex)
         {
             throw new CmdException(ErrorCode.APP_ERROR, ex.Message);
         }
+    }
+
+    public void showProfileHandler(Dictionary<string, object?>? optionArgs)
+    {
+        CheckAndSetAuthentication();
+
+        Console.WriteLine(JsonSerializer.Serialize(userInfo).ToString());
     }
 
 }

@@ -223,21 +223,23 @@ class Program
         var cliCommands = new CommandHandlers(GetUserInfoFilePath(), apiClient);
 
         var script = new Command("script", ["sc"], "Base command for working with scripts", true);
+        var showProfile = new Command("show-profile", [], "Show profile");
         var convert = new Command("convert", ["conv"], "Convert the given script to another language", true);
 
         convert.AddOptions(
                 new CommandOption<string?>(["--file", "-f"], "The file path of the script", true),
                 new CommandOption<string?>(["--from"], "The script language/type", true),
                 new CommandOption<string?>(["--to"], "The target language", true),
-                new CommandOption<string?>(["--output", "-o"], "The output file", true),
+                new CommandOption<string?>(["--output", "-o"], "The output file"),
                 new CommandOption<string?>(["--dir"], "The output directory (defaults to the current directory)")
                 );
 
         convert.SetHandler(cliCommands.ConvertHandler);
+        showProfile.SetHandler(cliCommands.showProfileHandler);
 
         script.AddSubcommands(convert);
 
-        rootCommand.AddSubcommands(script);
+        rootCommand.AddSubcommands(script, showProfile);
     }
 
     static async Task<int> Main(string[] args)
