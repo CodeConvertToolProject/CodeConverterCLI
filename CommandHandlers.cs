@@ -42,11 +42,9 @@ internal class CommandHandlers
     private string userInfoFilePath;
     private UserInfo? userInfo;
     private HttpClient apiClient;
-    /*private string openaiModel = "gpt-3.5-turbo-instruct";
-    private string openaiAccessKey = "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";*/
+    private string openaiModel = "gpt-3.5-turbo-instruct";
     private static string apiKey = "";
 
-    private string url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={apiKey}";
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
     {
         this.userInfoFilePath = userInfoFilePath;
@@ -92,7 +90,7 @@ internal class CommandHandlers
 
     private async Task<string?> ScriptConvertHandler(string content, string sourceScript, string targetScript, int maxTokens)
     {
-        /*string reqUrl = $"/api/ScriptConvert/{openaiAccessKey}";
+        string url = $"/api/ScriptConvert/{apiKey}";
 
         var req = new
         {
@@ -101,33 +99,16 @@ internal class CommandHandlers
             targetScript,
             content,
             maxTokens
-        };*/
-
-        var generateContentRequest = new GenerateContentRequest
-        {
-            contents = new List<Content>
-            {
-                new Content
-                {
-                    parts = new List<Part>
-                    {
-                        new Part { text = $"Convert this script {content} from {sourceScript} to {targetScript} (full runnable program, without language tags and accents)" }
-                    }
-                }
-            }
         };
 
-        var jsonReq = new StringContent(JsonSerializer.Serialize(generateContentRequest), Encoding.UTF8, "application/json");
+        var jsonReq = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
 
         var response = await apiClient.PostAsync(url, jsonReq);
 
         if (response.IsSuccessStatusCode)
         {
-            using var jsonResponse = await response.Content.ReadAsStreamAsync();
-
-            var generateContentResponse = JsonSerializer.Deserialize<GenerateContentResponse>(jsonResponse);
-
-            return generateContentResponse?.candidates?[0].content?.parts?[0].text;
+           var jsonResponse = await response.Content.ReadAsStringAsync();
+           return jsonResponse;
         }
         return default;
     }
@@ -151,12 +132,10 @@ internal class CommandHandlers
     {
         CheckAndSetAuthentication();
 
-        apiClient.DefaultRequestHeaders.Authorization = null;
-
         string filePath = (string)optionArgs!.GetValueOrDefault("file")!;
         string source = (string)optionArgs!.GetValueOrDefault("from")!;
         string target = (string)optionArgs!.GetValueOrDefault("to")!;
-        string output = (string)optionArgs!.GetValueOrDefault("output")!;
+        string? output = (string?)optionArgs!.GetValueOrDefault("output")!;
         string? dir = (string?)optionArgs!.GetValueOrDefault("dir");
 
         if (dir != null && !Directory.Exists(dir)) throw new CmdException(ErrorCode.APP_ERROR, "Directory specified does not exist");
@@ -171,7 +150,7 @@ internal class CommandHandlers
 
         try
         {
-            string completePath = (dir != null)?  Path.Combine(dir, output): Path.Combine(Directory.GetCurrentDirectory(), output);
+            string completePath = (dir != null)? Path.Combine(dir, output): Path.Combine(Directory.GetCurrentDirectory(), output);
                 
             File.WriteAllText(completePath, result.Trim());
 
