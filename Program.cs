@@ -41,7 +41,7 @@ internal class Developer
 
 class Program
 {
-    static readonly string API_URL = "https://localhost:63286";
+    static readonly string API_URL = "https://ec2-176-34-174-191.eu-west-1.compute.amazonaws.com";
     static HttpClient apiClient = new();
     static UserInfo? userInfo;
 

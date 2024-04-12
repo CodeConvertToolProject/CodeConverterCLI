@@ -136,7 +136,7 @@ internal class CommandHandlers
 
     public async Task ConvertHandler(Dictionary<string, object?>? optionArgs)
     {
-        CheckAndSetAuthentication();
+        //CheckAndSetAuthentication();
 
         apiClient.DefaultRequestHeaders.Authorization = null;
 
