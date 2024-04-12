@@ -42,7 +42,6 @@ internal class CommandHandlers
     private string userInfoFilePath;
     private UserInfo? userInfo;
     private HttpClient apiClient;
-    private static string apiKey = "";
     private string url = "";
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
     {
