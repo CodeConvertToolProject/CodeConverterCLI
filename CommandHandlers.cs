@@ -43,7 +43,7 @@ internal class CommandHandlers
     private UserInfo? userInfo;
     private HttpClient apiClient;
     /*private string openaiModel = "gpt-3.5-turbo-instruct";
-    private string openaiAccessKey = "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";*/
+    private string openaiAccessKey = "";*/
     private static string apiKey = "";
 
     private string url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={apiKey}";
