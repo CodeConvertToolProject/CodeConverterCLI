@@ -44,7 +44,7 @@ internal class CommandHandlers
     private HttpClient apiClient;
     /*private string openaiModel = "gpt-3.5-turbo-instruct";
     private string openaiAccessKey = "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";*/
-    private static string apiKey = "AIzaSyDG56kq42JQTYKNtWCbM4gjIQpi67cJw8g";
+    private static string apiKey = "";
 
     private string url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={apiKey}";
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
