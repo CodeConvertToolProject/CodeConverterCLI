@@ -90,17 +90,6 @@ internal class CommandHandlers
 
     private async Task<string?> ScriptConvertHandler(string content, string sourceScript, string targetScript, int maxTokens)
     {
-        /*string reqUrl = $"/api/ScriptConvert/{openaiAccessKey}";
-
-        var req = new
-        {
-            model = openaiModel,
-            sourceScript,
-            targetScript,
-            content,
-            maxTokens
-        };*/
-
         var generateContentRequest = new GenerateContentRequest
         {
             contents = new List<Content>
