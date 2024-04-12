@@ -6,6 +6,28 @@ using System.Threading.Tasks;
 
 namespace CodeConverterCLI.CommandLib;
 
+public enum ErrorCode
+{
+    CMD_ERROR,
+    APP_ERROR
+}
+
+public class CmdException(ErrorCode Error, string Message) : Exception
+{
+    public ErrorCode Error { get; private set; } = Error;
+    new public string Message { get; private set; } = Message;
+}
+
+public class MyException : Exception
+{
+    public List<String> MyStrings { get; private set; }
+
+    public MyException(List<String> myStrings)
+    {
+        this.MyStrings = myStrings;
+    }
+}
+
 internal class Command(string name, string[] aliases, string description, bool atLeastRequired = false)
 {
     public string Name { get; } = name;
@@ -89,7 +111,7 @@ internal class Command(string name, string[] aliases, string description, bool a
         }
     }
 
-    private int HandleUsageErrors(string arg)
+    private int HandleUsageErrors(string arg, bool allRequiredExist)
     {
         if (Options.All(option => !option.Names.Contains(arg)))
         {
@@ -97,6 +119,11 @@ internal class Command(string name, string[] aliases, string description, bool a
             return 1;
         }
 
+        if (!allRequiredExist)
+        {
+            DisplayHelp("Specify all the required options");
+            return 1;
+        }
         return 0;
     }
 
@@ -105,7 +132,14 @@ internal class Command(string name, string[] aliases, string description, bool a
         try { 
             await HandlerAsync(optionArguments); 
         }
-        catch (Exception e) { Console.WriteLine(e.Message); }
+        catch (CmdException e) { 
+            if (e.Error == ErrorCode.APP_ERROR) Console.WriteLine(e.Message); 
+            else throw new Exception(e.Message);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 
     private static async Task InvokeSyncHandler(HandlerDelegateSync HandlerSync, Dictionary<string, object?>? optionArguments)
@@ -114,7 +148,15 @@ internal class Command(string name, string[] aliases, string description, bool a
         {
             await Task.Run(() => HandlerSync(optionArguments));
         }
-        catch (Exception e) { Console.WriteLine(e.Message); }
+        catch (CmdException e)
+        {
+            if (e.Error == ErrorCode.APP_ERROR) Console.WriteLine(e.Message);
+            else throw new Exception(e.Message);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e.Message);
+        }
     }
 
     public async Task<int> Execute(string[] args)
@@ -127,8 +169,16 @@ internal class Command(string name, string[] aliases, string description, bool a
                 return 1;
             }
 
-            if (HandlerAsync != null) await InvokeAsyncHandler(HandlerAsync, null);  
-            else if (HandlerSync != null) await InvokeSyncHandler(HandlerSync, null);
+            try
+            {
+                if (HandlerAsync != null) await InvokeAsyncHandler(HandlerAsync, null);
+                else if (HandlerSync != null) await InvokeSyncHandler(HandlerSync, null);
+            } 
+            catch (Exception e)
+            {
+                DisplayHelp(e.Message);
+                return 1;
+            }
 
             return 0;
         }
@@ -154,12 +204,20 @@ internal class Command(string name, string[] aliases, string description, bool a
             return 0;
         }
 
-        int handleUsageErrorsResult = HandleUsageErrors(args[0]);
+        bool allRequiredExist = AllRequiredExist(parser);
+        int handleUsageErrorsResult = HandleUsageErrors(args[0], allRequiredExist);
 
-        if (AllRequiredExist(parser) && handleUsageErrorsResult == 0)
+        if (allRequiredExist && handleUsageErrorsResult == 0)
         {
-            if (HandlerAsync != null) await InvokeAsyncHandler(HandlerAsync, optionArgs);
-            else if (HandlerSync != null) await InvokeSyncHandler(HandlerSync, optionArgs);
+            try
+            {
+                if (HandlerAsync != null) await InvokeAsyncHandler(HandlerAsync, optionArgs);
+                else if (HandlerSync != null) await InvokeSyncHandler(HandlerSync, optionArgs);
+            } catch (Exception e) 
+            {
+                DisplayHelp(e.Message);
+                return 1;
+            }
 
             return 0;
         }
