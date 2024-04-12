@@ -101,7 +101,7 @@ internal class CommandHandlers
             maxTokens
         };
 
-        var jsonReq = new StringContent(JsonSerializer.Serialize(req));
+        var jsonReq = new StringContent(JsonSerializer.Serialize(req), Encoding.UTF8, "application/json");
 
         var response = await apiClient.PostAsync(url, jsonReq);
 
