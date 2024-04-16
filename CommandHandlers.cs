@@ -75,6 +75,7 @@ internal class CommandHandlers
 
     private async Task<string?> ScriptConvertHandler(string scriptContent, string source, string target)
     {
+        CheckAndSetAuthentication();
         var response = await apiClient.PostAsJsonAsync("api/ScriptConvertGemini", 
             new
             {
