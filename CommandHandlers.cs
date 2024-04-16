@@ -3,48 +3,32 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using CodeConverterCLI.Models;
 using CodeConverterCLI.CommandLib;
 using System.Text.Json;
 using System.IO;
-using System.Net.Http;
+    
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
+using System.Net.Http;
 
 namespace CodeConverterCLI;
 
-public class Part
+internal class ConvertResponse
 {
-    public string? text { get; set; }
+    [JsonPropertyName("response")]
+    public string? Response { get; set; }
 }
-
-internal class Content
-{
-    public List<Part>? parts { get; set; }
-}
-internal class GenerateContentRequest
-{
-    public List<Content>? contents { get; set; }
-}
-
-internal class GenerateContentResponse
-{
-    public List<Candidate>? candidates { get; set; }
-}
-
-internal class Candidate
-{
-    public Content? content { get; set; }
-}
-
 
 internal class CommandHandlers
 {
     private string userInfoFilePath;
     private UserInfo? userInfo;
     private HttpClient apiClient;
-    private static string apiKey = "";
 
-    private string url = $"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={apiKey}";
+    private static readonly int MAX_CONTENT_LENGTH = 8192;
+
     public CommandHandlers(string userInfoFilePath, HttpClient apiClient)
     {
         this.userInfoFilePath = userInfoFilePath;
@@ -76,45 +60,38 @@ internal class CommandHandlers
     {
         HttpContent fileStreamContent = new StreamContent(paramFileStream);
 
-        using (var formData = new MultipartFormDataContent())
+        using var formData = new MultipartFormDataContent
         {
-            formData.Add(fileStreamContent, "file", fileName);
-            var response = await apiClient.PostAsync(actionUrl, formData);
-            if (!response.IsSuccessStatusCode)
-            {
-                return 0;
-            }
-            return 1;
-        }
-    }
-
-    private async Task<string?> ScriptConvertHandler(string content, string sourceScript, string targetScript, int maxTokens)
-    {
-        var generateContentRequest = new GenerateContentRequest
-        {
-            contents = new List<Content>
-            {
-                new Content
-                {
-                    parts = new List<Part>
-                    {
-                        new Part { text = $"Convert this script {content} from {sourceScript} to {targetScript} (pure text without tidle characters)" }
-                    }
-                }
-            }
+            { fileStreamContent, "file", fileName }
         };
 
-        var jsonReq = new StringContent(JsonSerializer.Serialize(generateContentRequest), Encoding.UTF8, "application/json");
+        var response = await apiClient.PostAsync(actionUrl, formData);
+        if (!response.IsSuccessStatusCode)
+        {
+            return 0;
+        }
+        return 1;
+    }
 
-        var response = await apiClient.PostAsync(url, jsonReq);
+    private async Task<string?> ScriptConvertHandler(string scriptContent, string source, string target)
+    {
+        CheckAndSetAuthentication();
+
+        var response = await apiClient.PostAsJsonAsync("api/ScriptConvertGemini", 
+            new
+            {
+                source,
+                target,
+                content = scriptContent
+            });
 
         if (response.IsSuccessStatusCode)
         {
             using var jsonResponse = await response.Content.ReadAsStreamAsync();
 
-            var generateContentResponse = JsonSerializer.Deserialize<GenerateContentResponse>(jsonResponse);
+            var convertResponse = JsonSerializer.Deserialize<ConvertResponse>(jsonResponse);
 
-            return generateContentResponse?.candidates?[0].content?.parts?[0].text;
+            return convertResponse!.Response;
         }
         return default;
     }
@@ -136,23 +113,23 @@ internal class CommandHandlers
 
     public async Task ConvertHandler(Dictionary<string, object?>? optionArgs)
     {
-        //CheckAndSetAuthentication();
+        CheckAndSetAuthentication();
 
         apiClient.DefaultRequestHeaders.Authorization = null;
 
-        string filePath = (string)optionArgs!.GetValueOrDefault("file")!;
-        string source = (string)optionArgs!.GetValueOrDefault("from")!;
-        string target = (string)optionArgs!.GetValueOrDefault("to")!;
-        string? output = (string?)optionArgs!.GetValueOrDefault("output")!;
-        string? dir = (string?)optionArgs!.GetValueOrDefault("dir");
+        string filePath = (string)optionArgs!["file"]!;
+        string source = (string)optionArgs!["from"]!;
+        string target = (string)optionArgs!["to"]!;
+        string? output = (string?)optionArgs!["output"]!;
+        string? dir = (string?)optionArgs!["dir"];
 
         if (dir != null && !Directory.Exists(dir)) throw new CmdException(ErrorCode.APP_ERROR, "Directory specified does not exist");
 
         string content = ReadFile(filePath);
 
-        if (content.Length > 1000) throw new CmdException(ErrorCode.APP_ERROR, "Maximum content length exceeded");
+        if (content.Length > MAX_CONTENT_LENGTH) throw new CmdException(ErrorCode.APP_ERROR, "Maximum content length exceeded");
 
-        string? result = await ScriptConvertHandler(content, source, target, content.Length);
+        string? result = await ScriptConvertHandler(content, source, target);
 
         if (String.IsNullOrEmpty(result)) throw new CmdException(ErrorCode.APP_ERROR, "Error converting script");
 
@@ -168,8 +145,6 @@ internal class CommandHandlers
             {
                 Console.WriteLine(result.Trim());
             }
-
-            
         }
         catch (Exception ex)
         {
@@ -177,10 +152,13 @@ internal class CommandHandlers
         }
     }
 
-    public void showProfileHandler(Dictionary<string, object?>? optionArgs)
+    public void ShowProfileHandler(Dictionary<string, object?>? optionArgs)
     {
         CheckAndSetAuthentication();
-
-        Console.WriteLine(JsonSerializer.Serialize(userInfo).ToString());
+        var options = new JsonSerializerOptions
+        {
+            WriteIndented = true
+        };
+        Console.WriteLine(JsonSerializer.Serialize(userInfo, options));
     }
 }

@@ -11,7 +11,7 @@ using CodeConverterCLI.Models;
 using System.Threading;
 using System.IO;
 using System.Text.Json.Serialization;
-using System.Linq;
+using static System.Net.WebRequestMethods;
 
 namespace CodeConverterCLI;
 
@@ -41,7 +41,7 @@ internal class Developer
 
 class Program
 {
-    static readonly string API_URL = "https://ec2-176-34-174-191.eu-west-1.compute.amazonaws.com";
+    static readonly string URL = "http://codeconv.us-east-1.elasticbeanstalk.com";
     static HttpClient apiClient = new();
     static UserInfo? userInfo;
 
@@ -78,11 +78,12 @@ class Program
 
     static async Task SetUserInfo(UserInfoRequest userInfoRequest)
     {
+
         HttpResponseMessage response = await apiClient.PostAsJsonAsync(
             "/api/Login/GetUserInfo", userInfoRequest);
 
         response.EnsureSuccessStatusCode();
-     
+
         var userInfoResponse = await ParseJson<UserInfoResponse>(response);
 
         userInfo!.UserName = userInfoResponse.UserName;
@@ -91,7 +92,6 @@ class Program
 
     static async Task<AccessTokenResponse> GetAccessToken(AccessTokenRequest accessTokenRequest, LoginResponse loginResponse)
     {
-        var startTime = DateTime.Now;
         int interval = int.Parse(loginResponse.Interval);
 
         var tcs = new TaskCompletionSource<AccessTokenResponse>();
@@ -134,7 +134,7 @@ class Program
             Directory.CreateDirectory(directoryPath);   
         }
 
-        File.WriteAllText(filePath, jsonString);
+        System.IO.File.WriteAllText(filePath, jsonString);
     }
 
     static async Task<Developer> GetUserProfile()
@@ -176,16 +176,16 @@ class Program
         string userInfoFilePath = GetUserInfoFilePath();
         bool allRequiredFieldsExist = false;
 
-        if (File.Exists(userInfoFilePath))
+        if (System.IO.File.Exists(userInfoFilePath))
         {
-            string userInfoString = File.ReadAllText(userInfoFilePath);
+            string userInfoString = System.IO.File.ReadAllText(userInfoFilePath);
 
             userInfo = JsonSerializer.Deserialize<UserInfo>(userInfoString);
             allRequiredFieldsExist = userInfo?.Id != null && userInfo?.UserName != null && userInfo?.AccessToken != null;
 
             if (allRequiredFieldsExist)
             {
-                Console.WriteLine("Logged in successfully");
+                Console.WriteLine("Already logged in");
             }
         }
 
@@ -230,12 +230,12 @@ class Program
                 new CommandOption<string?>(["--file", "-f"], "The file path of the script", true),
                 new CommandOption<string?>(["--from"], "The script language/type", true),
                 new CommandOption<string?>(["--to"], "The target language", true),
-                new CommandOption<string?>(["--output", "-o"], "The output file"),
+                new CommandOption<string?>(["--output", "-o"], "The output file (defauls to the standard output)"),
                 new CommandOption<string?>(["--dir"], "The output directory (defaults to the current directory)")
                 );
 
         convert.SetHandler(cliCommands.ConvertHandler);
-        showProfile.SetHandler(cliCommands.showProfileHandler);
+        showProfile.SetHandler(cliCommands.ShowProfileHandler);
 
         script.AddSubcommands(convert);
 
@@ -245,42 +245,41 @@ class Program
     static async Task<int> Main(string[] args)
     {
         var rootCommand = new RootCommand("A CLI tool for language conversion");
-        var login = new Command("login", [], "Authenticate with the backend and cache the access token");
+        var login = new Command("login", [], "Authenticate with the backend and store the access token");
         var logout = new Command("logout", [], "Delete the access token");
 
-        ConfigureHttpClient(ref apiClient, API_URL);
+        ConfigureHttpClient(ref apiClient, URL);
 
         rootCommand.AddOptions(
             new CommandOption<bool?>(
                 ["--version", "-v"],
                 "Show version information"));
         
-        rootCommand.SetHandler((Dictionary<string, object?>? optionArgs) =>
+        rootCommand.SetHandler((optionArgs) =>
         {
-            if (optionArgs == null) 
+            if (optionArgs == default) 
             {
                 rootCommand.DisplayHelp("");
             }
             else
             {
-                bool showVersion = (bool?)optionArgs?.GetValueOrDefault("version", default) ?? false;
+                bool showVersion = (bool)optionArgs["version"]!;
 
                 if (showVersion == true)
                 {
-                    Console.WriteLine($"{rootCommand.Name} v1.0.0");
+                    Console.WriteLine("v1.0.0");
                 }
             }
-                
         });
 
         login.SetHandler(LoginHandler);
 
-        logout.SetHandler((Dictionary<string, object?>? optionArgs) =>
+        logout.SetHandler((_) =>
         {
             string userInfoFilePath = GetUserInfoFilePath();
-            if (File.Exists(userInfoFilePath)) 
+            if (System.IO.File.Exists(userInfoFilePath)) 
             {
-                File.Delete(userInfoFilePath);
+                System.IO.File.Delete(userInfoFilePath);
                 Console.WriteLine("Logged out successfully");
             }
             else

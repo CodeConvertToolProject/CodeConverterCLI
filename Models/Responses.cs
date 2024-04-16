@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
+﻿using System.Text.Json.Serialization;
 
 namespace CodeConverterCLI;
 internal class AccessTokenResponse
@@ -28,7 +22,7 @@ internal class LoginResponse
 internal class ErrorResponse
 {
     [JsonPropertyName("error")]
-    public required string Error { get; set; }
+    public string? Error { get; set; }
 }
 
 internal class UserInfoResponse

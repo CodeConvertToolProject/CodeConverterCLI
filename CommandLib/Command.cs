@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -229,7 +230,8 @@ internal class Command(string name, string[] aliases, string description, bool a
     {
         string usage(string tag) => AtLeastRequired ? $"<{tag}>" : $"[{tag}]";
 
-        string appName = Path.GetFileNameWithoutExtension(System.Reflection.Assembly.GetExecutingAssembly().Location);
+        string appName = Path.GetFileNameWithoutExtension(Environment.ProcessPath) ?? "<exec_name>";
+
         static string showAliases(string[] aliases_) => (aliases_.Length > 0 ? " | " + String.Join(" | ", aliases_) : "");
 
         if (!string.IsNullOrEmpty(errorMessage))
@@ -263,7 +265,7 @@ internal class Command(string name, string[] aliases, string description, bool a
             {
                 Console.WriteLine
                 (
-                    $"{String.Join('|', option.Names),-20}{(option.IsRequired ? "[REQUIRED] " : "")}{option.Description}"
+                    $"{String.Join(" | ", option.Names), -20}{(option.IsRequired ? "[REQUIRED] " : "")}{option.Description}"
                 );
             }
         }

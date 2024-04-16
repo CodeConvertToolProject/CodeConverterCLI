@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "CodeConverterCLI": {
+      "commandName": "Project",
+      "commandLineArgs": "script convert -f test.cs --from cs --to js"
+    }
+  }
+}

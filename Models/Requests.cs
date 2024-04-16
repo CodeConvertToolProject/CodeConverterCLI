@@ -15,7 +15,7 @@ internal class AccessTokenRequest
 
 internal class UserInfoRequest
 {
-    [JsonPropertyName("Token")]
+    [JsonPropertyName("token")]
     public required string AccessToken { get; set; }
 }
 

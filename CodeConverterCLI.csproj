@@ -1,15 +1,19 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <Nullable>enable</Nullable>
-    <UserSecretsId>b21925de-4d97-4e20-86ab-91bba98ecc7c</UserSecretsId>
-  </PropertyGroup>
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>disable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<UserSecretsId>b21925de-4d97-4e20-86ab-91bba98ecc7c</UserSecretsId>
+	</PropertyGroup>
 
-  <PropertyGroup>
-    <AssemblyName>codeconv</AssemblyName>
-  </PropertyGroup>
+    <PropertyGroup>
+        <AssemblyName>codeconv</AssemblyName>
+    </PropertyGroup>
+	
+	<PropertyGroup>
+		<PublishSingleFile>true</PublishSingleFile>
+	</PropertyGroup>
 
 </Project>
